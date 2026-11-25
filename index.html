@@ -175,41 +175,45 @@ function pet(e){S.ents.splice(S.ents.indexOf(e),1);meow(.7);S.lives=Math.min(3,S
 var ovt=document.getElementById('ovt'),ovp=document.getElementById('ovp'),go=document.getElementById('go');
 var T={mode:'off',vid:document.getElementById('vid'),pvc:document.getElementById('pvc'),st:document.getElementById('st'),ep:document.createElement('canvas'),px:null,rows:[],mx:null,my:null,ci:0,ct:0,dots:[],sm:null};
 T.ep.width=128;T.ep.height=88;var ec=T.ep.getContext('2d',{willReadFrequently:true});
-function pupil(g){var Wd=128,Hd=88,k=34,I=new Float32Array(129*89),x,y;
-for(y=0;y<Hd;y++){var row=0;for(x=0;x<Wd;x++){row+=g[y*Wd+x];I[(y+1)*129+x+1]=I[y*129+x+1]+row}}
-function sum(x,y){return I[(y+k)*129+x+k]-I[y*129+x+k]-I[(y+k)*129+x]+I[y*129+x]}
-var mean=I[89*129-1]/(Wd*Hd),best=1e9,bx=0,by=0;
-for(y=0;y<=Hd-k;y+=2)for(x=0;x<=Wd-k;x+=2){var dx=x+k/2-64,dy=y+k/2-44,s=sum(x,y)/(k*k)+.0015*(dx*dx+dy*dy);if(s<best){best=s;bx=x;by=y}}
-var m=sum(bx,by)/(k*k);if(mean-m<14)return null;
-var t2=m+35,sx=0,sy=0,sw=0;for(y=Math.max(0,by-6);y<Math.min(Hd,by+k+6);y++)for(x=Math.max(0,bx-6);x<Math.min(Wd,bx+k+6);x++){var w=t2-g[y*Wd+x];if(w>0){sx+=w*x;sy+=w*y;sw+=w}}
-return sw?{x:sx/sw/Wd-.5,y:sy/sw/Hd-.5}:null}
-T.read=function(){var v=T.vid,vw=v.videoWidth,vh=v.videoHeight;if(!vw)return null;var cf=T.cfg||{c:[{x:vw*.44,y:vh*.42},{x:vw*.56,y:vh*.42}],bw:vw*.095},bw=cf.bw,bh=bw*.68,out=[],px=[],ok=true;
-for(var i=0;i<2;i++){var bx=Math.max(0,Math.min(vw-bw,cf.c[i].x-bw/2)),by=Math.max(0,Math.min(vh-bh,cf.c[i].y-bh/2));ec.drawImage(v,bx,by,bw,bh,0,0,128,88);var d=ec.getImageData(0,0,128,88).data,g=new Float32Array(11264);for(var j=0;j<11264;j++)g[j]=.3*d[j*4]+.59*d[j*4+1]+.11*d[j*4+2];var p=pupil(g);px.push({bx:bx,by:by,bw:bw,bh:bh,p:p});if(p)out.push(p.x,p.y);else ok=false}
-T.px=px;return ok?out:null};
-T.drawPv=function(f){var c=T.pvc,v=T.vid;if(!v.videoWidth)return;c.width=c.clientWidth||168;c.height=c.clientHeight||94;var q=c.getContext('2d'),s=c.width/v.videoWidth;q.strokeStyle='#3de0c5';q.lineWidth=1.5;(T.px||[]).forEach(function(b){q.strokeRect(b.bx*s,b.by*s,b.bw*s,b.bh*s);if(b.p){q.fillStyle='#ff5d8f';q.beginPath();q.arc((b.bx+(b.p.x+.5)*b.bw)*s,(b.by+(b.p.y+.5)*b.bh)*s,2.5,0,6.28);q.fill()}});T.st.textContent=f?'👁️ Eyes found':'🔍 Pupils not detected: adjust light or tap your eyes again'};
-function phi(f){var x=(f[0]+f[2])*7.5,y=(f[1]+f[3])*7.5;return[1,x,y,x*y,x*x,y*y]}
+var FL=null;
+function loadModel(ok,fail){var B='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+import(B+'/vision_bundle.mjs').then(function(m){return m.FilesetResolver.forVisionTasks(B+'/wasm').then(function(fs){var mk=function(d){return m.FaceLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',delegate:d},runningMode:'VIDEO',numFaces:1})};return mk('GPU').catch(function(){return mk('CPU')})})}).then(function(l){FL=l;ok()}).catch(fail)}
+T.read=function(){var v=T.vid,vw=v.videoWidth,vh=v.videoHeight;if(!vw||!FL)return null;
+if(v.currentTime===T.lt)return T.last;T.lt=v.currentTime;
+var r=FL.detectForVideo(v,performance.now()),L=r.faceLandmarks&&r.faceLandmarks[0];
+if(!L||L.length<478){T.pts=null;return T.last=null}
+T.pts=[468,473,33,133,362,263].map(function(i){return L[i]});
+function P(i){return{x:L[i].x*vw,y:L[i].y*vh}}
+var g=[],ok=true;
+[[33,133,468,159,145],[362,263,473,386,374]].forEach(function(e){var a=P(e[0]),b=P(e[1]),t;if(a.x>b.x){t=a;a=b;b=t}var p=P(e[2]),dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy),ux=dx/l,uy=dy/l,qx=p.x-a.x,qy=p.y-a.y,u=P(e[3]),w=P(e[4]);
+if(Math.hypot(u.x-w.x,u.y-w.y)/l<.13)ok=false;g.push((qx*ux+qy*uy)/l-.5,(-qx*uy+qy*ux)/l)});
+var a=P(33),b=P(263);
+return T.last=ok?{g:g,h:[((a.x+b.x)/2/vw-.5)*3,((a.y+b.y)/2/vh-.5)*3,(Math.hypot(a.x-b.x,a.y-b.y)/vw-.15)*10]}:null};
+T.drawPv=function(f){var c=T.pvc,v=T.vid;if(!v.videoWidth)return;c.width=c.clientWidth||168;c.height=c.clientHeight||94;var q=c.getContext('2d');q.fillStyle='#ff5d8f';(T.pts||[]).forEach(function(p){q.beginPath();q.arc(p.x*c.width,p.y*c.height,2.5,0,6.28);q.fill()});T.st.textContent=f?'👁️ Eyes tracked':'🔍 Face the camera in good light'};
+function phi(f){var x=(f.g[0]+f.g[2])*4,y=(f.g[1]+f.g[3])*5,h=f.h;return[1,x,y,x*y,x*x,y*y,h[0],h[1],h[2]]}
 function solve(A,b){var n=b.length,i,r,c,t;for(i=0;i<n;i++){var p=i;for(r=i+1;r<n;r++)if(Math.abs(A[r][i])>Math.abs(A[p][i]))p=r;t=A[i];A[i]=A[p];A[p]=t;t=b[i];b[i]=b[p];b[p]=t;for(r=i+1;r<n;r++){var m=A[r][i]/A[i][i];for(c=i;c<n;c++)A[r][c]-=m*A[i][c];b[r]-=m*b[i]}}var x=[];for(i=n-1;i>=0;i--){var s=b[i];for(c=i+1;c<n;c++)s-=A[i][c]*x[c];x[i]=s/A[i][i]}return x}
 function dot(a,b){var s=0;for(var i=0;i<a.length;i++)s+=a[i]*b[i];return s}
-function fit(){var n=6,A=[],bx=[],by=[],i,j;for(i=0;i<n;i++){A.push([]);bx.push(0);by.push(0);for(j=0;j<n;j++)A[i].push(i===j&&i>0?.05:0)}
+function fit(){var n=9,A=[],bx=[],by=[],i,j;for(i=0;i<n;i++){A.push([]);bx.push(0);by.push(0);for(j=0;j<n;j++)A[i].push(i===j&&i>0?.01:0)}
 T.rows.forEach(function(r){var p=phi(r.f);for(i=0;i<n;i++){for(j=0;j<n;j++)A[i][j]+=p[i]*p[j];bx[i]+=p[i]*r.t[0];by[i]+=p[i]*r.t[1]}});
 var A2=A.map(function(r){return r.slice()});T.mx=solve(A,bx);T.my=solve(A2,by);
 var e=0;T.rows.forEach(function(r){var p=phi(r.f);e+=Math.hypot(dot(T.mx,p)-r.t[0],dot(T.my,p)-r.t[1])});return e/T.rows.length}
 T.map=function(f){var p=phi(f);return{x:Math.max(0,Math.min(W,dot(T.mx,p))),y:Math.max(0,Math.min(H,dot(T.my,p)))}};
 function beginCalib(){S.run=false;T.mode='calib';T.cw=W;T.ch=H;T.ci=0;T.ct=0;T.rows=[];T.dots=[];var g=[.1,.5,.9];for(var j=0;j<3;j++){var cs=j%2?[2,1,0]:[0,1,2];for(var i=0;i<3;i++)T.dots.push([g[cs[i]]*W,g[j]*H])}ov.classList.add('hide')}
-function finishCalib(){ov.classList.remove('hide');if(T.rows.length<90){T.mode='align';ovt.textContent='I couldn’t see your eyes well';ovp.textContent='Sit about an arm’s length from the screen, face a light, and put both eyes inside the two teal boxes. Then calibrate again.';go.textContent='Calibrate again';return}
+function finishCalib(){ov.classList.remove('hide');if(T.rows.length<120){T.mode='align';ovt.textContent='I couldn’t see your eyes well';ovp.textContent='Face a light and keep your whole face in view. Then calibrate again.';go.textContent='Calibrate again';return}
 var err=fit();T.mode='ready';T.sm=null;ovt.textContent='Calibrated! 🎯';ovp.textContent='Average error about '+Math.round(err)+' px'+(err>W*.15?' — that’s high, so try recalibrating in brighter light with your head still.':'.')+' Look at aliens to lock on, look at cats to pet them. Keep your head still!';go.textContent='Start game'}
 T.step=function(){
 if(T.mode==='off'){ovp.textContent='Waiting for camera permission…';
 var md=navigator.mediaDevices;if(!md||!md.getUserMedia){ovt.textContent='No camera access here';ovp.textContent='This browser view doesn’t allow the camera. Open the page link in its own browser tab and try again.';return}
-md.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:false}).then(function(m){T.vid.srcObject=m;T.vid.play();T.mode='align';document.querySelector('.pv').classList.add('on');ovt.textContent='Line up your eyes 👀';ovp.textContent='Face a light and hold still. In the preview above, tap the centre of one eye, then the other. The teal boxes should frame your eyes and pink dots should land on your pupils. Then press Calibrate and look at 9 dots. On a phone, prop it up so it doesn’t shake.';go.textContent='Calibrate'}).catch(function(){ovt.textContent='Camera blocked';ovp.textContent='Allow camera access in your browser. If this page is embedded, open its link in its own tab. Your video never leaves your device.';go.textContent='Try again'});return}
+md.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:false}).then(function(m){T.vid.srcObject=m;T.vid.play();document.querySelector('.pv').classList.add('on');ovt.textContent='Loading eye-tracking model…';ovp.textContent='Downloading a small face model (a few MB, first time only). Needs internet.';go.disabled=true;
+loadModel(function(){go.disabled=false;T.mode='align';ovt.textContent='Line up your face 👀';ovp.textContent='Face a light, keep your whole face in view and hold still. Pink dots should sit on your eyes in the preview. Then press Calibrate and follow 9 dots with your eyes only (not your head). On a phone, prop it up so it doesn’t shake.';go.textContent='Calibrate'},function(){go.disabled=false;T.mode='off';ovt.textContent='Couldn’t load the eye model';ovp.textContent='Check your internet connection and try again. If you opened the file straight from your computer, host it on HTTPS (GitHub Pages) instead.';go.textContent='Try again'})}).catch(function(){ovt.textContent='Camera blocked';ovp.textContent='Allow camera access in your browser. If this page is embedded, open its link in its own tab. Your video never leaves your device.';go.textContent='Try again'});return}
 if(T.mode==='align'){beginCalib();return}
 if(T.mode==='ready')start()};
 T.setPv=function(){var v=T.vid,pv=document.querySelector('.pv');if(!v.videoWidth)return;var big=T.mode==='align',h=big?200:94,w=Math.min(h*v.videoWidth/v.videoHeight,cv.parentNode.clientWidth*.9);pv.style.width=w+'px';pv.style.height=(w*v.videoHeight/v.videoWidth)+'px';pv.classList.toggle('big',big);ov.classList.toggle('al',big)};
 document.querySelector('.pv').addEventListener('pointerdown',function(e){if(T.mode!=='align'||!T.vid.videoWidth)return;var r=this.getBoundingClientRect(),vw=T.vid.videoWidth,vh=T.vid.videoHeight,pt={x:(1-(e.clientX-r.left)/r.width)*vw,y:(e.clientY-r.top)/r.height*vh};T.taps=(T.taps&&T.taps.length===1)?T.taps.concat([pt]):[pt];if(T.taps.length===2){var sp=Math.hypot(T.taps[0].x-T.taps[1].x,T.taps[0].y-T.taps[1].y);T.cfg={c:T.taps,bw:Math.max(40,sp*.75)}}});
 T.tick=function(dt){if(T.mode==='off'||T.vid.readyState<2)return;if(T.lm!==T.mode){T.lm=T.mode;T.setPv()}var f=T.read();T.drawPv(f);
-if(T.mode==='calib'){T.ct+=dt;if(T.ct>.9&&T.ct<1.9&&f)T.rows.push({f:f,t:T.dots[T.ci]});if(T.ct>=1.9){T.ci++;T.ct=0;if(T.ci>=9)finishCalib()}}
+if(T.mode==='calib'){T.ct+=dt;if(T.ct>.8&&T.ct<2&&f)T.rows.push({f:f,t:T.dots[T.ci]});if(T.ct>=2){T.ci++;T.ct=0;if(T.ci>=9)finishCalib()}}
 else if(T.mode==='ready'&&f){var p=T.map(f);T.sm=T.sm?{x:T.sm.x+(p.x-T.sm.x)*.25,y:T.sm.y+(p.y-T.sm.y)*.25}:p;gaze.x=T.sm.x;gaze.y=T.sm.y}};
-T.draw=function(){if(T.mode!=='calib'||!T.dots[T.ci])return;var d=T.dots[T.ci];ctx.fillStyle='#ffd23f';ctx.beginPath();ctx.arc(d[0],d[1],10+3*Math.sin(S.t*8),0,6.28);ctx.fill();ctx.strokeStyle='#3de0c5';ctx.lineWidth=4;ctx.beginPath();ctx.arc(d[0],d[1],22,-1.57,-1.57+6.28*Math.min(1,T.ct/1.9));ctx.stroke();ctx.font='16px Fredoka,sans-serif';ctx.fillStyle='#fff';ctx.fillText('Look at the dot and keep your head still ('+(T.ci+1)+'/9)',W/2,H/2)};
+T.draw=function(){if(T.mode!=='calib'||!T.dots[T.ci])return;var d=T.dots[T.ci];ctx.fillStyle='#ffd23f';ctx.beginPath();ctx.arc(d[0],d[1],10+3*Math.sin(S.t*8),0,6.28);ctx.fill();ctx.strokeStyle='#3de0c5';ctx.lineWidth=4;ctx.beginPath();ctx.arc(d[0],d[1],22,-1.57,-1.57+6.28*Math.min(1,T.ct/2));ctx.stroke();ctx.font='16px Fredoka,sans-serif';ctx.fillStyle='#fff';ctx.fillText('Look at the dot and keep your head still ('+(T.ci+1)+'/9)',W/2,H/2)};
 document.getElementById('recal').onclick=function(){if(T.mode==='ready')beginCalib()};
 var last=performance.now();
 function frame(now){var dt=Math.min((now-last)/1000,.05);last=now;update(dt);draw();requestAnimationFrame(frame)}
