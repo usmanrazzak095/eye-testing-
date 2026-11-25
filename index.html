@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="EyePlay: play a shooting game with your real eyes using your webcam, and learn how eye tracking works.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👁️</text></svg>">
+<title>EyePlay – play with your eyes</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#14123a;--bg2:#1f1c57;--ink:#f6f3ff;--mute:#b9b4e6;--star:#ffd23f;--cat:#ff8a3d;--teal:#3de0c5;--pink:#ff5d8f;--card:#26226b;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14123a}}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#fff7e6;--bg2:#ffe9b8;--ink:#2a2160;--mute:#5b5390;--card:#fff;--star:#f5a300}}
+:root[data-theme="dark"]{--bg:#14123a}
+html{scroll-padding-top:env(safe-area-inset-top,0px);scroll-behavior:smooth}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Fredoka',system-ui,sans-serif;font-size:18px;line-height:1.55;overflow-x:hidden}
+section{max-width:1000px;margin:0 auto;padding:72px 20px}
+h1,h2,h3{line-height:1.1;margin:0 0 .4em}
+h2{font-size:clamp(30px,5vw,46px)}
+p{max-width:62ch;color:var(--mute)}
+.hero{text-align:center;padding-top:56px;position:relative}
+.eyes{display:flex;gap:14px;justify-content:center;margin-bottom:12px}
+.eye{width:92px;height:92px;border-radius:50%;background:#fff;position:relative;box-shadow:0 8px 0 rgba(0,0,0,.25);animation:blink 5s infinite}
+.pupil{position:absolute;width:40px;height:40px;border-radius:50%;background:#14123a;left:26px;top:26px}
+.pupil:after{content:"";position:absolute;width:12px;height:12px;border-radius:50%;background:#fff;left:8px;top:7px}
+@keyframes blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.08)}}
+h1{font-size:clamp(56px,13vw,120px);letter-spacing:-.02em}
+h1 span{display:inline-block;animation:hop 2.4s ease-in-out infinite}
+@keyframes hop{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-.18em) rotate(-4deg)}}
+.hero p{margin:0 auto 24px;font-size:22px}
+.btn{font:inherit;font-weight:700;border:0;border-radius:999px;padding:14px 30px;background:var(--star);color:#2a2160;cursor:pointer;box-shadow:0 6px 0 #c99a00;transition:transform .1s,box-shadow .1s;text-decoration:none;display:inline-block}
+.btn:hover{transform:translateY(-2px)}.btn:active{transform:translateY(4px);box-shadow:0 2px 0 #c99a00}
+:focus-visible{outline:3px solid var(--teal);outline-offset:3px}
+.float{position:absolute;font-size:34px;animation:fl 6s ease-in-out infinite;pointer-events:none}
+@keyframes fl{50%{transform:translateY(-22px) rotate(14deg)}}
+.game{background:linear-gradient(var(--bg2),var(--bg));border-radius:28px;max-width:1040px;margin:0 auto}
+.stage{position:relative;border-radius:22px;overflow:hidden;background:#0c0a2b;border:4px solid var(--teal);touch-action:none;cursor:none}
+canvas{display:block;width:100%;height:min(62vh,480px)}
+.hud{display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin-bottom:12px;font-weight:600}
+.hud b{color:var(--star)}
+.hud button+button{margin-left:0}.pv{display:none;position:absolute;right:10px;top:10px;width:168px;height:94px;z-index:5;border-radius:12px;overflow:hidden;border:2px solid #3de0c5;transform:scaleX(-1);background:#000}.pv.on{display:block}.pv video,.pv canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:fill}.pv.big{right:auto;left:50%;top:8px;transform:translateX(-50%) scaleX(-1);cursor:crosshair}.overlay.al{justify-content:flex-start;padding-top:226px;overflow:auto}.hud button{margin-left:auto;background:var(--card);color:var(--ink);border:2px solid var(--teal);border-radius:999px;padding:6px 16px;font:inherit;cursor:pointer}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;background:rgba(12,10,43,.82);color:#f6f3ff;cursor:default}
+.overlay p{color:#d8d3ff}.overlay.hide{display:none}
+.overlay h3{font-size:clamp(28px,5vw,42px)}
+.grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));margin-top:26px}
+.card{background:var(--card);border-radius:22px;padding:22px;transition:transform .2s;border:2px solid transparent}
+.card:hover{transform:rotate(-1.5deg) translateY(-6px);border-color:var(--pink)}
+.card .ic{font-size:44px;display:inline-block;transition:transform .3s}.card:hover .ic{transform:scale(1.3) rotate(12deg)}
+.card h3{font-size:24px}.card p{margin:0;font-size:16px}
+.steps .card:nth-child(1){border-top:6px solid var(--teal)}.steps .card:nth-child(2){border-top:6px solid var(--star)}.steps .card:nth-child(3){border-top:6px solid var(--pink)}.steps .card:nth-child(4){border-top:6px solid var(--cat)}
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:26px}
+.vs div{border-radius:22px;padding:24px}
+.vs .d{background:var(--card);border:3px dashed var(--star)}.vs .r{background:var(--card);border:3px solid var(--teal)}
+.vs ul{padding-left:20px;margin:0;color:var(--mute)}.vs li{margin:6px 0}
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .6s,transform .6s}.reveal.in{opacity:1;transform:none}
+footer{text-align:center;padding:40px 20px;color:var(--mute)}
+@media(max-width:640px){.vs{grid-template-columns:1fr}.eye{width:70px;height:70px}.pupil{left:18px;top:18px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
+.fovea{position:relative;border-radius:22px;background:var(--card);padding:26px;margin:22px 0;cursor:crosshair;font-size:20px;line-height:1.5;--mx:-300px;--my:-300px;overflow:hidden;touch-action:none}
+.fovea .blur{filter:blur(5px);user-select:none}
+.fovea .sharp{position:absolute;inset:0;padding:26px;-webkit-mask-image:radial-gradient(circle 80px at var(--mx) var(--my),#000 60%,transparent 100%);mask-image:radial-gradient(circle 80px at var(--mx) var(--my),#000 60%,transparent 100%)}
+.eyebox{display:flex;justify-content:center;margin:26px 0 6px}
+.bigeye{width:190px;height:190px;border-radius:50%;background:#fff;position:relative;box-shadow:0 8px 0 rgba(0,0,0,.25)}
+.iris{position:absolute;width:84px;height:84px;border-radius:50%;background:radial-gradient(#14123a 38%,#3de0c5 40%,#1b8c7a);left:53px;top:53px;animation:scan 5s ease-in-out infinite}
+.glint{position:absolute;width:12px;height:12px;border-radius:50%;background:#ffd23f;box-shadow:0 0 12px 4px #ffd23f;left:90px;top:62px}
+@keyframes scan{0%,100%{transform:translate(-40px,-10px)}50%{transform:translate(40px,14px)}}
+.cap{text-align:center;margin:0 auto 10px;font-size:16px}
+.steps .card:nth-child(5){border-top:6px solid var(--teal)}
+</style>
+</head>
+<body>
+<section class="hero">
+<span class="float" style="left:8%;top:90px">⭐</span><span class="float" style="right:10%;top:140px;animation-delay:-2s">🐱</span><span class="float" style="left:14%;top:330px;animation-delay:-4s">✨</span>
+<div class="eyes" aria-hidden="true"><div class="eye"><div class="pupil"></div></div><div class="eye"><div class="pupil"></div></div></div>
+<h1 aria-label="EyePlay"><span>E</span><span style="animation-delay:.1s">y</span><span style="animation-delay:.2s">e</span><span style="animation-delay:.3s;color:var(--star)">P</span><span style="animation-delay:.4s;color:var(--star)">l</span><span style="animation-delay:.5s;color:var(--star)">a</span><span style="animation-delay:.6s;color:var(--star)">y</span></h1>
+<p>Play games with just your eyes, using your webcam. Blast space aliens with your gaze, rescue curious space cats, and find out how eye tracking really works.</p>
+<a class="btn" href="#play">Play Cat Blaster</a>
+</section>
+
+<section id="play" class="game reveal">
+<h2>Cat Blaster 🚀</h2>
+<p>This game is controlled by your real eyes through your webcam. Calibrate once, then look at an alien until the ring fills and your ship fires. Look at a cat to pet her and win back a life. Keep your head still and your room well lit.</p>
+<div class="hud"><span>Score <b id="sc">0</b></span><span>Lives <b id="lv">❤️❤️❤️</b></span><span>Best <b id="bs">0</b></span><span id="st">Camera off</span><button id="recal">🎯 Recalibrate</button><button id="mute" aria-pressed="false">🔊 Sound on</button></div>
+<div class="stage"><canvas id="cv"></canvas>
+<div class="pv"><video id="vid" playsinline muted autoplay></video><canvas id="pvc"></canvas></div><div class="overlay" id="ov"><h3 id="ovt">Ready, pilot? 👁️</h3><p id="ovp">Press the button, allow camera access, then calibrate by looking at 9 dots. Your video is processed on your device and never uploaded.</p><button class="btn" id="go">Turn on camera</button></div></div>
+</section>
+
+<section class="reveal"><h2>👁️ What is eye tracking?</h2>
+<p>Eye tracking measures where you look, for how long, and how your eyes move. The result is a stream of gaze points: coordinates on the screen, captured anywhere from 60 to 1,000+ times a second. A game or app can use them to know what you’re paying attention to before you click anything.</p>
+<p>Why is that so useful? Because you only see sharply in a tiny spot. Move your cursor over the fuzzy text below to see your “fovea” at work.</p>
+<div class="fovea" id="fov"><div class="blur" aria-hidden="true">Right now, only a patch about the size of your thumbnail at arm’s length is razor sharp. Your brain builds a detailed picture of the world by jumping your eyes around three or four times every second, and an eye tracker records every one of those jumps.</div><div class="sharp">Right now, only a patch about the size of your thumbnail at arm’s length is razor sharp. Your brain builds a detailed picture of the world by jumping your eyes around three or four times every second, and an eye tracker records every one of those jumps.</div></div>
+<div class="grid">
+<div class="card"><div class="ic">⏸️</div><h3>Fixations</h3><p>Your eyes pause for roughly 200 to 300 milliseconds. This is when you actually take in information, so trackers count and time them.</p></div>
+<div class="card"><div class="ic">⚡</div><h3>Saccades</h3><p>The super-fast jumps between fixations, among the quickest movements your body makes. Vision is mostly suppressed during them.</p></div>
+<div class="card"><div class="ic">🔍</div><h3>Pupil size</h3><p>Pupils change with light, and also with mental effort and excitement, so researchers read them like a tiny mood meter.</p></div>
+</div></section>
+
+<section class="reveal"><h2>🧠 How it works</h2>
+<p>Most trackers follow the same recipe: light up the eye, take pictures, find two landmarks, then do some clever geometry.</p>
+<div class="eyebox"><div class="bigeye"><div class="iris"></div><div class="glint"></div></div></div>
+<p class="cap">Watch the dark pupil slide around while the bright glint stays put. The gap between them is the clue.</p>
+<div class="grid steps">
+<div class="card"><div class="ic">💡</div><h3>1. Light the eye</h3><p>Invisible near-infrared LEDs shine on your face. It doesn’t bother you, and it makes the pupil stand out clearly in any room.</p></div>
+<div class="card"><div class="ic">📷</div><h3>2. Take pictures</h3><p>A fast infrared camera grabs dozens or hundreds of close-up eye images every second.</p></div>
+<div class="card"><div class="ic">⚫</div><h3>3. Find the landmarks</h3><p>Software spots the pupil centre and the tiny glint of the LEDs on your cornea. The pupil turns with your eye, the glint barely moves.</p></div>
+<div class="card"><div class="ic">🎯</div><h3>4. Calibrate</h3><p>You stare at 5 to 9 dots. The system learns how your pupil-to-glint distance maps to spots on the screen, because every eye and face is different.</p></div>
+<div class="card"><div class="ic">🧭</div><h3>5. Estimate and smooth</h3><p>Every frame, the learned mapping turns the eye image into a screen point. Filters remove jitter and label each moment as a fixation or a saccade.</p></div>
+</div>
+<p>Webcam-only trackers skip the infrared and use machine learning on regular video. They’re cheaper but less precise. Dedicated trackers can tell where you look to within about a degree or better.</p>
+<h3>From gaze to game</h3>
+<p>Eyes can’t click, so eye-controlled games use dwell: look at something long enough and it activates. That’s exactly how Cat Blaster’s lock-on ring works. It’s also why the ring fills slowly: it stops you from firing at everything your eyes sweep over.</p>
+</section>
+
+<section class="reveal"><h2>🎯 Real-world uses</h2>
+<div class="grid">
+<div class="card"><div class="ic">🎮</div><h3>Gaming</h3><p>Aim with a glance and make characters look back at you.</p></div>
+<div class="card"><div class="ic">♿</div><h3>Accessibility</h3><p>People who can’t use their hands can type, talk and play using only their eyes.</p></div>
+<div class="card"><div class="ic">🥽</div><h3>VR</h3><p>Headsets sharpen only what you look at, which saves power and feels more real.</p></div>
+<div class="card"><div class="ic">🔬</div><h3>Research</h3><p>Scientists study attention, reading and how people explore websites and ads.</p></div>
+</div></section>
+
+<section class="reveal"><h2>📌 Your webcam vs. pro eye trackers</h2>
+<p>EyePlay now tracks your real eyes, but with an ordinary webcam. Here’s how that compares:</p>
+<div class="vs">
+<div class="d"><h3>📷 EyePlay (webcam)</h3><ul><li>Finds your pupils in normal video</li><li>Needs good light and a still head</li><li>Calibrate every session</li><li>Rough accuracy, so targets are big</li><li>All video stays in your browser</li></ul></div>
+<div class="r"><h3>🔬 Professional trackers</h3><ul><li>Infrared LEDs and cameras</li><li>Glints let them handle head movement</li><li>Accurate to about a degree or better</li><li>Hundreds of readings per second</li><li>Used in labs, cars, VR and accessibility</li></ul></div>
+</div></section>
+<footer>EyePlay · made for curious eyes and curious cats 🐾</footer>
+
+<script>
+(function(){
+// hero eyes follow pointer
+var pupils=document.querySelectorAll('.pupil');
+function look(x,y){pupils.forEach(function(p){var r=p.parentNode.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,a=Math.atan2(y-cy,x-cx),d=Math.min(r.width*.22,Math.hypot(x-cx,y-cy)/8);p.style.transform='translate('+Math.cos(a)*d+'px,'+Math.sin(a)*d+'px)'})}
+addEventListener('pointermove',function(e){look(e.clientX,e.clientY)});
+// scroll reveal
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12});
+document.querySelectorAll('.reveal').forEach(function(el){io.observe(el)});
+
+// ---------- game ----------
+var cv=document.getElementById('cv'),ctx=cv.getContext('2d'),W=0,H=0,dpr=1;
+var ov=document.getElementById('ov'),sc=document.getElementById('sc'),lv=document.getElementById('lv'),bs=document.getElementById('bs');
+var best=0,muted=false,ac=null,K=1;
+function size(){dpr=Math.min(devicePixelRatio||1,2);var r=cv.getBoundingClientRect();W=r.width;H=r.height;K=Math.max(.65,Math.min(1,W/720));cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}
+addEventListener('resize',function(){size();if(T.mode==='ready'&&(Math.abs(W-T.cw)>60||Math.abs(H-T.ch)>90)){T.mode='align';S.run=false;ovt.textContent='Screen size changed';ovp.textContent='Please calibrate again.';go.textContent='Calibrate';ov.classList.remove('hide')}});size();
+var S={run:false,score:0,lives:3,combo:0,ents:[],beams:[],parts:[],t:0,spawn:0,lock:null,lockT:0,hurt:0};
+var gaze={x:W/2,y:H/3};
+var bg=[];for(var i=0;i<70;i++)bg.push([Math.random(),Math.random(),Math.random()*1.6+.4]);
+function snd(){return !muted&&ac}
+function tone(f1,f2,dur,type,vol){if(!snd())return;var t=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.setValueAtTime(f1,t);o.frequency.linearRampToValueAtTime(f2,t+dur);g.gain.setValueAtTime(vol,t);g.gain.linearRampToValueAtTime(0,t+dur);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+dur)}
+function laser(){tone(1400,180,.2,'sawtooth',.1)}
+function boom(){if(!snd())return;var n=ac.sampleRate*.3,b=ac.createBuffer(1,n,ac.sampleRate),d=b.getChannelData(0);for(var i=0;i<n;i++)d[i]=(Math.random()*2-1)*(1-i/n);var s=ac.createBufferSource(),f=ac.createBiquadFilter(),g=ac.createGain();s.buffer=b;f.type='lowpass';f.frequency.value=900;g.gain.value=.3;s.connect(f);f.connect(g);g.connect(ac.destination);s.start()}
+function meow(v){if(!snd())return;var t=ac.currentTime,o=ac.createOscillator(),f=ac.createBiquadFilter(),g=ac.createGain(),base=360+Math.random()*80;
+o.type='sawtooth';o.frequency.setValueAtTime(base,t);o.frequency.linearRampToValueAtTime(base*1.9,t+.16);o.frequency.linearRampToValueAtTime(base*1.1,t+.55);
+f.type='bandpass';f.Q.value=4;f.frequency.setValueAtTime(700,t);f.frequency.linearRampToValueAtTime(1900,t+.18);f.frequency.linearRampToValueAtTime(800,t+.55);
+g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.35*v,t+.06);g.gain.linearRampToValueAtTime(0,t+.6);
+o.connect(f);f.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+.65)}
+function hearts(){var s='';for(var i=0;i<3;i++)s+=i<S.lives?'❤️':'🖤';lv.textContent=s}
+function burst(x,y,c){for(var i=0;i<20;i++){var a=Math.random()*6.28,s=60+Math.random()*200;S.parts.push({x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:1,c:c})}}
+function spawn(){var cat=Math.random()<.16,x0=60+Math.random()*(W-120);
+S.ents.push({x:x0,x0:x0,y:-30,ph:Math.random()*6,cat:cat,e:cat?'🐱':['👾','👽','🛸'][Math.floor(Math.random()*3)],r:(cat?34:32)*K,vy:(cat?36:30)+Math.min(S.score*.25,60)})}
+function start(){if(!ac){try{ac=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(ac&&ac.resume)ac.resume();
+S.run=true;S.score=0;S.lives=3;S.combo=0;S.ents=[];S.beams=[];S.lock=null;S.lockT=0;S.hurt=0;S.spawn=.3;sc.textContent=0;hearts();ov.classList.add('hide');laser()}
+function end(){S.run=false;best=Math.max(best,S.score);bs.textContent=best;document.getElementById('ovt').textContent='Mission over 💥';document.getElementById('ovp').textContent='You scored '+S.score+' points. Try again?';document.getElementById('go').textContent='Play again';ov.classList.remove('hide')}
+document.getElementById('go').onclick=function(){T.step()};
+document.getElementById('mute').onclick=function(){muted=!muted;this.textContent=muted?'🔇 Sound off':'🔊 Sound on';this.setAttribute('aria-pressed',muted)};
+function hurt(x,y){S.lives--;S.combo=0;S.hurt=.5;hearts();burst(x,y,'#ff5d8f');if(S.lives<=0)end()}
+function fire(e){S.beams.push({x1:W/2,y1:H-34,x2:e?e.x:gaze.x,y2:e?e.y:gaze.y,l:1});laser();if(!e){S.combo=0;return}
+S.ents.splice(S.ents.indexOf(e),1);
+if(e.cat){meow(1.2);hurt(e.x,e.y)}else{S.combo++;S.score+=10*(1+Math.floor(S.combo/5));sc.textContent=S.score;boom();burst(e.x,e.y,'#ffd23f')}}
+function pet(e){S.ents.splice(S.ents.indexOf(e),1);meow(.7);S.lives=Math.min(3,S.lives+1);S.score+=5;sc.textContent=S.score;hearts();burst(e.x,e.y,'#ff9ed0');tone(660,1320,.25,'sine',.12)}
+// ---------- webcam eye tracker ----------
+var ovt=document.getElementById('ovt'),ovp=document.getElementById('ovp'),go=document.getElementById('go');
+var T={mode:'off',vid:document.getElementById('vid'),pvc:document.getElementById('pvc'),st:document.getElementById('st'),ep:document.createElement('canvas'),px:null,rows:[],mx:null,my:null,ci:0,ct:0,dots:[],sm:null};
+T.ep.width=128;T.ep.height=88;var ec=T.ep.getContext('2d',{willReadFrequently:true});
+function pupil(g){var Wd=128,Hd=88,k=34,I=new Float32Array(129*89),x,y;
+for(y=0;y<Hd;y++){var row=0;for(x=0;x<Wd;x++){row+=g[y*Wd+x];I[(y+1)*129+x+1]=I[y*129+x+1]+row}}
+function sum(x,y){return I[(y+k)*129+x+k]-I[y*129+x+k]-I[(y+k)*129+x]+I[y*129+x]}
+var mean=I[89*129-1]/(Wd*Hd),best=1e9,bx=0,by=0;
+for(y=0;y<=Hd-k;y+=2)for(x=0;x<=Wd-k;x+=2){var dx=x+k/2-64,dy=y+k/2-44,s=sum(x,y)/(k*k)+.0015*(dx*dx+dy*dy);if(s<best){best=s;bx=x;by=y}}
+var m=sum(bx,by)/(k*k);if(mean-m<14)return null;
+var t2=m+35,sx=0,sy=0,sw=0;for(y=Math.max(0,by-6);y<Math.min(Hd,by+k+6);y++)for(x=Math.max(0,bx-6);x<Math.min(Wd,bx+k+6);x++){var w=t2-g[y*Wd+x];if(w>0){sx+=w*x;sy+=w*y;sw+=w}}
+return sw?{x:sx/sw/Wd-.5,y:sy/sw/Hd-.5}:null}
+T.read=function(){var v=T.vid,vw=v.videoWidth,vh=v.videoHeight;if(!vw)return null;var cf=T.cfg||{c:[{x:vw*.44,y:vh*.42},{x:vw*.56,y:vh*.42}],bw:vw*.095},bw=cf.bw,bh=bw*.68,out=[],px=[],ok=true;
+for(var i=0;i<2;i++){var bx=Math.max(0,Math.min(vw-bw,cf.c[i].x-bw/2)),by=Math.max(0,Math.min(vh-bh,cf.c[i].y-bh/2));ec.drawImage(v,bx,by,bw,bh,0,0,128,88);var d=ec.getImageData(0,0,128,88).data,g=new Float32Array(11264);for(var j=0;j<11264;j++)g[j]=.3*d[j*4]+.59*d[j*4+1]+.11*d[j*4+2];var p=pupil(g);px.push({bx:bx,by:by,bw:bw,bh:bh,p:p});if(p)out.push(p.x,p.y);else ok=false}
+T.px=px;return ok?out:null};
+T.drawPv=function(f){var c=T.pvc,v=T.vid;if(!v.videoWidth)return;c.width=c.clientWidth||168;c.height=c.clientHeight||94;var q=c.getContext('2d'),s=c.width/v.videoWidth;q.strokeStyle='#3de0c5';q.lineWidth=1.5;(T.px||[]).forEach(function(b){q.strokeRect(b.bx*s,b.by*s,b.bw*s,b.bh*s);if(b.p){q.fillStyle='#ff5d8f';q.beginPath();q.arc((b.bx+(b.p.x+.5)*b.bw)*s,(b.by+(b.p.y+.5)*b.bh)*s,2.5,0,6.28);q.fill()}});T.st.textContent=f?'👁️ Eyes found':'🔍 Pupils not detected: adjust light or tap your eyes again'};
+function phi(f){var x=(f[0]+f[2])*7.5,y=(f[1]+f[3])*7.5;return[1,x,y,x*y,x*x,y*y]}
+function solve(A,b){var n=b.length,i,r,c,t;for(i=0;i<n;i++){var p=i;for(r=i+1;r<n;r++)if(Math.abs(A[r][i])>Math.abs(A[p][i]))p=r;t=A[i];A[i]=A[p];A[p]=t;t=b[i];b[i]=b[p];b[p]=t;for(r=i+1;r<n;r++){var m=A[r][i]/A[i][i];for(c=i;c<n;c++)A[r][c]-=m*A[i][c];b[r]-=m*b[i]}}var x=[];for(i=n-1;i>=0;i--){var s=b[i];for(c=i+1;c<n;c++)s-=A[i][c]*x[c];x[i]=s/A[i][i]}return x}
+function dot(a,b){var s=0;for(var i=0;i<a.length;i++)s+=a[i]*b[i];return s}
+function fit(){var n=6,A=[],bx=[],by=[],i,j;for(i=0;i<n;i++){A.push([]);bx.push(0);by.push(0);for(j=0;j<n;j++)A[i].push(i===j&&i>0?.05:0)}
+T.rows.forEach(function(r){var p=phi(r.f);for(i=0;i<n;i++){for(j=0;j<n;j++)A[i][j]+=p[i]*p[j];bx[i]+=p[i]*r.t[0];by[i]+=p[i]*r.t[1]}});
+var A2=A.map(function(r){return r.slice()});T.mx=solve(A,bx);T.my=solve(A2,by);
+var e=0;T.rows.forEach(function(r){var p=phi(r.f);e+=Math.hypot(dot(T.mx,p)-r.t[0],dot(T.my,p)-r.t[1])});return e/T.rows.length}
+T.map=function(f){var p=phi(f);return{x:Math.max(0,Math.min(W,dot(T.mx,p))),y:Math.max(0,Math.min(H,dot(T.my,p)))}};
+function beginCalib(){S.run=false;T.mode='calib';T.cw=W;T.ch=H;T.ci=0;T.ct=0;T.rows=[];T.dots=[];var g=[.1,.5,.9];for(var j=0;j<3;j++){var cs=j%2?[2,1,0]:[0,1,2];for(var i=0;i<3;i++)T.dots.push([g[cs[i]]*W,g[j]*H])}ov.classList.add('hide')}
+function finishCalib(){ov.classList.remove('hide');if(T.rows.length<90){T.mode='align';ovt.textContent='I couldn’t see your eyes well';ovp.textContent='Sit about an arm’s length from the screen, face a light, and put both eyes inside the two teal boxes. Then calibrate again.';go.textContent='Calibrate again';return}
+var err=fit();T.mode='ready';T.sm=null;ovt.textContent='Calibrated! 🎯';ovp.textContent='Average error about '+Math.round(err)+' px'+(err>W*.15?' — that’s high, so try recalibrating in brighter light with your head still.':'.')+' Look at aliens to lock on, look at cats to pet them. Keep your head still!';go.textContent='Start game'}
+T.step=function(){
+if(T.mode==='off'){ovp.textContent='Waiting for camera permission…';
+var md=navigator.mediaDevices;if(!md||!md.getUserMedia){ovt.textContent='No camera access here';ovp.textContent='This browser view doesn’t allow the camera. Open the page link in its own browser tab and try again.';return}
+md.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:false}).then(function(m){T.vid.srcObject=m;T.vid.play();T.mode='align';document.querySelector('.pv').classList.add('on');ovt.textContent='Line up your eyes 👀';ovp.textContent='Face a light and hold still. In the preview above, tap the centre of one eye, then the other. The teal boxes should frame your eyes and pink dots should land on your pupils. Then press Calibrate and look at 9 dots. On a phone, prop it up so it doesn’t shake.';go.textContent='Calibrate'}).catch(function(){ovt.textContent='Camera blocked';ovp.textContent='Allow camera access in your browser. If this page is embedded, open its link in its own tab. Your video never leaves your device.';go.textContent='Try again'});return}
+if(T.mode==='align'){beginCalib();return}
+if(T.mode==='ready')start()};
+T.setPv=function(){var v=T.vid,pv=document.querySelector('.pv');if(!v.videoWidth)return;var big=T.mode==='align',h=big?200:94,w=Math.min(h*v.videoWidth/v.videoHeight,cv.parentNode.clientWidth*.9);pv.style.width=w+'px';pv.style.height=(w*v.videoHeight/v.videoWidth)+'px';pv.classList.toggle('big',big);ov.classList.toggle('al',big)};
+document.querySelector('.pv').addEventListener('pointerdown',function(e){if(T.mode!=='align'||!T.vid.videoWidth)return;var r=this.getBoundingClientRect(),vw=T.vid.videoWidth,vh=T.vid.videoHeight,pt={x:(1-(e.clientX-r.left)/r.width)*vw,y:(e.clientY-r.top)/r.height*vh};T.taps=(T.taps&&T.taps.length===1)?T.taps.concat([pt]):[pt];if(T.taps.length===2){var sp=Math.hypot(T.taps[0].x-T.taps[1].x,T.taps[0].y-T.taps[1].y);T.cfg={c:T.taps,bw:Math.max(40,sp*.75)}}});
+T.tick=function(dt){if(T.mode==='off'||T.vid.readyState<2)return;if(T.lm!==T.mode){T.lm=T.mode;T.setPv()}var f=T.read();T.drawPv(f);
+if(T.mode==='calib'){T.ct+=dt;if(T.ct>.9&&T.ct<1.9&&f)T.rows.push({f:f,t:T.dots[T.ci]});if(T.ct>=1.9){T.ci++;T.ct=0;if(T.ci>=9)finishCalib()}}
+else if(T.mode==='ready'&&f){var p=T.map(f);T.sm=T.sm?{x:T.sm.x+(p.x-T.sm.x)*.25,y:T.sm.y+(p.y-T.sm.y)*.25}:p;gaze.x=T.sm.x;gaze.y=T.sm.y}};
+T.draw=function(){if(T.mode!=='calib'||!T.dots[T.ci])return;var d=T.dots[T.ci];ctx.fillStyle='#ffd23f';ctx.beginPath();ctx.arc(d[0],d[1],10+3*Math.sin(S.t*8),0,6.28);ctx.fill();ctx.strokeStyle='#3de0c5';ctx.lineWidth=4;ctx.beginPath();ctx.arc(d[0],d[1],22,-1.57,-1.57+6.28*Math.min(1,T.ct/1.9));ctx.stroke();ctx.font='16px Fredoka,sans-serif';ctx.fillStyle='#fff';ctx.fillText('Look at the dot and keep your head still ('+(T.ci+1)+'/9)',W/2,H/2)};
+document.getElementById('recal').onclick=function(){if(T.mode==='ready')beginCalib()};
+var last=performance.now();
+function frame(now){var dt=Math.min((now-last)/1000,.05);last=now;update(dt);draw();requestAnimationFrame(frame)}
+function update(dt){S.t+=dt;T.tick(dt);
+S.parts.forEach(function(p){p.x+=p.vx*dt;p.y+=p.vy*dt;p.l-=dt*1.8});S.parts=S.parts.filter(function(p){return p.l>0});
+S.beams.forEach(function(b){b.l-=dt*5});S.beams=S.beams.filter(function(b){return b.l>0});
+if(!S.run)return;
+S.hurt=Math.max(0,S.hurt-dt);S.spawn-=dt;if(S.spawn<=0){spawn();S.spawn=Math.max(.45,1.3-S.score*.004)}
+S.ents.slice().forEach(function(e){e.y+=e.vy*dt;e.x=Math.max(30,Math.min(W-30,e.x0+Math.sin(S.t*1.5+e.ph)*45));
+if(e.y>H-50){S.ents.splice(S.ents.indexOf(e),1);if(!e.cat){boom();hurt(e.x,H-50)}}});
+if(!S.run)return;
+var tg=null,bd=1e9;S.ents.forEach(function(e){var d=Math.hypot(e.x-gaze.x,e.y-gaze.y);if(d<e.r+60*K&&d<bd){bd=d;tg=e}});
+if(tg!==S.lock){S.lock=tg;S.lockT=0}
+if(tg){S.lockT+=dt;var need=tg.cat?.7:.45;if(S.lockT>=need){S.lockT=0;S.lock=null;if(tg.cat)pet(tg);else fire(tg)}}}
+function draw(){ctx.clearRect(0,0,W,H);var g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#0c0a2b');g.addColorStop(1,'#2a1f6b');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+bg.forEach(function(s){var y=((s[1]*H+S.t*20*s[2])%H);ctx.globalAlpha=.3+.2*s[2];ctx.fillStyle='#fff';ctx.fillRect(s[0]*W,y,s[2],s[2]*3)});ctx.globalAlpha=1;
+ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=(64*K)+'px serif';
+S.ents.forEach(function(e){ctx.save();ctx.translate(e.x,e.y);ctx.rotate(Math.sin(S.t*3+e.ph)*.15);ctx.fillText(e.e,0,0);ctx.restore()});
+if(S.lock){var l=S.lock,need=l.cat?.7:.45;ctx.lineWidth=5;ctx.strokeStyle=l.cat?'#ff9ed0':'#3de0c5';ctx.beginPath();ctx.arc(l.x,l.y,l.r+12,-1.57,-1.57+6.28*S.lockT/need);ctx.stroke();ctx.font='15px Fredoka,sans-serif';ctx.fillStyle=ctx.strokeStyle;ctx.fillText(l.cat?'petting…':'locking…',l.x,l.y-l.r-24);ctx.font=(64*K)+'px serif'}
+S.beams.forEach(function(b){ctx.globalAlpha=b.l;ctx.strokeStyle='#ff5d8f';ctx.lineWidth=5*b.l+1;ctx.shadowColor='#ff5d8f';ctx.shadowBlur=14;ctx.beginPath();ctx.moveTo(b.x1,b.y1);ctx.lineTo(b.x2,b.y2);ctx.stroke();ctx.shadowBlur=0});ctx.globalAlpha=1;
+S.parts.forEach(function(p){ctx.globalAlpha=p.l;ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(p.x,p.y,4,0,6.28);ctx.fill()});ctx.globalAlpha=1;
+ctx.save();ctx.translate(W/2,H-34);ctx.rotate(Math.atan2(gaze.y-(H-34),gaze.x-W/2)+Math.PI/4);ctx.font='46px serif';ctx.fillText('🚀',0,0);ctx.restore();
+if(S.combo>1){ctx.font='700 18px Fredoka,sans-serif';ctx.fillStyle='#ffd23f';ctx.textAlign='left';ctx.fillText('Combo x'+S.combo,12,22);ctx.textAlign='center'}
+T.draw();var x=gaze.x,y=gaze.y;ctx.strokeStyle=S.hurt>0?'#ff5d8f':'#fff';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(x,y,16,0,6.28);ctx.moveTo(x-24,y);ctx.lineTo(x-8,y);ctx.moveTo(x+8,y);ctx.lineTo(x+24,y);ctx.moveTo(x,y-24);ctx.lineTo(x,y-8);ctx.moveTo(x,y+8);ctx.lineTo(x,y+24);ctx.stroke()}
+var fv=document.getElementById('fov');fv.addEventListener('pointermove',function(e){var r=fv.getBoundingClientRect();fv.style.setProperty('--mx',(e.clientX-r.left)+'px');fv.style.setProperty('--my',(e.clientY-r.top)+'px')});
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
